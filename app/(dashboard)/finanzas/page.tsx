@@ -1,18 +1,36 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 
+interface Proyecto { id: string; nombre: string; zona: string }
+interface Partida  { proyecto_id: string; tipo: string; monto: number; aplica: boolean }
+
 export default async function FinanzasPage() {
   const supabase = await createClient()
 
-  const { data: proyectos } = await supabase.from('proyectos').select('id, nombre, zona').eq('estatus', 'activo')
-  const { data: partidas } = await supabase.from('partidas_financieras').select('*')
+  const { data: proyectos } = await supabase
+    .from('proyectos')
+    .select('id, nombre, zona')
+    .eq('estatus', 'activo')
 
-  const lista = proyectos ?? []
-  const allPartidas = partidas ?? []
+  const { data: partidas } = await supabase
+    .from('partidas_financieras')
+    .select('proyecto_id, tipo, monto, aplica')
+
+  const lista: Proyecto[]  = proyectos ?? []
+  const allPartidas: Partida[] = partidas ?? []
+
   const fmt = (n: number) => `$${n.toLocaleString('es-MX', { minimumFractionDigits: 0 })}`
 
-  let totalEgresosGlobal = 0
-  let totalIngresosGlobal = 0
+  // Calcular totales globales
+  const totales = lista.reduce(
+    (acc, p) => {
+      const pp = allPartidas.filter(x => x.proyecto_id === p.id && x.aplica)
+      acc.egresos  += pp.filter(x => x.tipo === 'egreso').reduce((a, x) => a + x.monto, 0)
+      acc.ingresos += pp.filter(x => x.tipo === 'ingreso').reduce((a, x) => a + x.monto, 0)
+      return acc
+    },
+    { egresos: 0, ingresos: 0 }
+  )
 
   return (
     <div>
@@ -21,17 +39,15 @@ export default async function FinanzasPage() {
       <div className="flex flex-col gap-4">
         {lista.map(p => {
           const pp = allPartidas.filter(x => x.proyecto_id === p.id && x.aplica)
-          const egresos = pp.filter(x => x.tipo === 'egreso').reduce((a, x) => a + x.monto, 0)
+          const egresos  = pp.filter(x => x.tipo === 'egreso').reduce((a, x) => a + x.monto, 0)
           const ingresos = pp.filter(x => x.tipo === 'ingreso').reduce((a, x) => a + x.monto, 0)
           const utilidad = ingresos - egresos
-          totalEgresosGlobal += egresos
-          totalIngresosGlobal += ingresos
 
           return (
             <div key={p.id} className="bg-white rounded-2xl border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <Link href={`/proyectos/${p.id}?tab=finanzas`}>
+                  <Link href={`/proyectos/${p.id}`}>
                     <h2 className="text-sm font-semibold text-gray-900 hover:text-red-600 transition">{p.nombre}</h2>
                   </Link>
                   <p className="text-xs text-gray-400">{p.zona}</p>
@@ -61,22 +77,22 @@ export default async function FinanzasPage() {
         })}
       </div>
 
-      {/* Totales globales */}
+      {/* Consolidado global */}
       {lista.length > 1 && (
         <div className="bg-white rounded-2xl border-2 p-5 mt-4" style={{ borderColor: '#C0271A' }}>
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Consolidado — todos los proyectos</h3>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Total egresos</p>
-              <p className="text-lg font-bold text-red-600">{fmt(totalEgresosGlobal)}</p>
+              <p className="text-lg font-bold text-red-600">{fmt(totales.egresos)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Total ingresos</p>
-              <p className="text-lg font-bold text-green-600">{fmt(totalIngresosGlobal)}</p>
+              <p className="text-lg font-bold text-green-600">{fmt(totales.ingresos)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Utilidad total est.</p>
-              <p className="text-lg font-bold" style={{ color: '#C0271A' }}>{fmt(totalIngresosGlobal - totalEgresosGlobal)}</p>
+              <p className="text-lg font-bold" style={{ color: '#C0271A' }}>{fmt(totales.ingresos - totales.egresos)}</p>
             </div>
           </div>
         </div>

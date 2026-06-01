@@ -1,12 +1,37 @@
-export type Rol = 'admin' | 'colaborador'
-export type EstatusProyecto = 'activo' | 'cerrado' | 'cancelado'
-export type EstadoDocumento = 'faltante' | 'tramite' | 'listo'
-export type TipoDocumento = 'archivo' | 'checklist'
-export type RequeridoDocumento = 'obligatorio' | 'opcional'
-export type TipoPartida = 'egreso' | 'ingreso'
-export type TemperaturaProspecto = 'caliente' | 'tibio' | 'frio'
-export type EstatusProspecto = 'activo' | 'descartado' | 'comprador'
-export type TipoSeguimiento = 'llamada' | 'whatsapp' | 'visita' | 'nota'
+// ============================================
+// TIPOS Y CONSTANTES PARA LIBERAVIT
+// ============================================
+
+export const TEMPERATURA_OPTIONS = ['caliente', 'tibio', 'frio'] as const
+export type TemperaturaProspecto = typeof TEMPERATURA_OPTIONS[number]
+
+export const ESTADO_DOC_OPTIONS = ['faltante', 'tramite', 'listo'] as const
+export type EstadoDocumento = typeof ESTADO_DOC_OPTIONS[number]
+
+export const TIPO_DOC_OPTIONS = ['archivo', 'checklist'] as const
+export type TipoDocumento = typeof TIPO_DOC_OPTIONS[number]
+
+export const REQUERIDO_OPTIONS = ['obligatorio', 'opcional'] as const
+export type RequeridoDocumento = typeof REQUERIDO_OPTIONS[number]
+
+export const ROL_OPTIONS = ['admin', 'colaborador'] as const
+export type Rol = typeof ROL_OPTIONS[number]
+
+export const ESTATUS_PROYECTO_OPTIONS = ['activo', 'cerrado', 'cancelado'] as const
+export type EstatusProyecto = typeof ESTATUS_PROYECTO_OPTIONS[number]
+
+export const TIPO_PARTIDA_OPTIONS = ['egreso', 'ingreso'] as const
+export type TipoPartida = typeof TIPO_PARTIDA_OPTIONS[number]
+
+export const ESTATUS_PROSPECTO_OPTIONS = ['activo', 'descartado', 'comprador'] as const
+export type EstatusProspecto = typeof ESTATUS_PROSPECTO_OPTIONS[number]
+
+export const TIPO_SEGUIMIENTO_OPTIONS = ['llamada', 'whatsapp', 'visita', 'nota'] as const
+export type TipoSeguimiento = typeof TIPO_SEGUIMIENTO_OPTIONS[number]
+
+// ============================================
+// INTERFACES DE BASE DE DATOS
+// ============================================
 
 export interface Usuario {
   id: string
@@ -89,6 +114,10 @@ export interface SeguimientoProspecto {
   creado_en: string
 }
 
+// ============================================
+// CONSTANTES DE ETAPAS
+// ============================================
+
 export const ETAPAS = [
   { num: 1, nombre: 'Captación' },
   { num: 2, nombre: 'Negociación y due diligence' },
@@ -97,7 +126,7 @@ export const ETAPAS = [
   { num: 5, nombre: 'Comercialización (Venta)' },
   { num: 6, nombre: 'Tramitología de venta' },
   { num: 7, nombre: 'Cierre y cobranza' },
-]
+] as const
 
 export const ETAPA_COLORES: Record<number, string> = {
   1: '#1D9E75',
