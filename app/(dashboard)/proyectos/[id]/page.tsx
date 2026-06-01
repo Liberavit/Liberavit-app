@@ -29,4 +29,3 @@ export default async function ProyectoPage({ params }: PageProps) {
     />
   )
 }
-Arregla params Promise Next.js 15
