@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import { ETAPAS, ETAPA_COLORES, TEMPERATURA_OPTIONS, type Proyecto, type Documento, type PartidaFinanciera, type Prospecto, type TemperaturaProspecto, type EstadoDocumento } from '@/types'
+import Link from 'next/link'
+import { ETAPAS, TEMPERATURA_OPTIONS, type Proyecto, type Documento, type PartidaFinanciera, type Prospecto, type TemperaturaProspecto, type EstadoDocumento } from '@/types'
 
 type Tab = 'etapas' | 'documentos' | 'finanzas' | 'prospectos'
 
@@ -52,6 +53,8 @@ export default function ProyectoDetalle({
     temperatura: 'frio',
   })
 
+  const archivado = proyecto.estatus === 'archivado'
+
   // ── Etapas ──────────────────────────────────────────
   const progreso = Math.round(((proyecto.etapa_actual - 1) / 6) * 100)
 
@@ -74,6 +77,30 @@ export default function ProyectoDetalle({
       .from('proyectos')
       .update({ etapa_actual: nuevaEtapa })
       .eq('id', proyecto.id)
+    router.refresh()
+  }
+
+  // ── Archivar / Eliminar proyecto ─────────────────────
+  async function toggleArchivarProyecto() {
+    const nuevoEstatus = archivado ? 'activo' : 'archivado'
+    const pregunta = archivado
+      ? '¿Restaurar este proyecto? Volverá a aparecer en la lista de proyectos activos.'
+      : '¿Archivar este proyecto? Dejará de aparecer en la lista de proyectos activos, pero podrás consultarlo en archivados.'
+    if (!window.confirm(pregunta)) return
+    await supabase.from('proyectos').update({ estatus: nuevoEstatus }).eq('id', proyecto.id)
+    router.push('/proyectos')
+    router.refresh()
+  }
+
+  async function eliminarProyecto() {
+    if (
+      !window.confirm(
+        '¿Eliminar este proyecto PERMANENTEMENTE? Se borrarán también sus documentos y finanzas. Los prospectos vinculados NO se borran, solo quedan sin propiedad. Esta acción no se puede deshacer.'
+      )
+    )
+      return
+    await supabase.from('proyectos').delete().eq('id', proyecto.id)
+    router.push('/proyectos')
     router.refresh()
   }
 
@@ -134,7 +161,7 @@ export default function ProyectoDetalle({
         tipo_credito: nuevoProspecto.tipo_credito,
         temperatura: nuevoProspecto.temperatura,
         estatus: 'activo',
-        asignado_a: user?.id,
+        asignado_a: user?.id ?? null,
       })
       .select()
       .single()
@@ -157,9 +184,16 @@ export default function ProyectoDetalle({
     <div>
       {/* Header del proyecto */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">{proyecto.nombre}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-gray-900">{proyecto.nombre}</h1>
+              {archivado && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                  Archivado
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 mt-0.5">
               {proyecto.zona}
               {proyecto.metros2 ? ` · ${proyecto.metros2}m²` : ''} · {proyecto.recamaras} rec /{' '}
@@ -172,14 +206,14 @@ export default function ProyectoDetalle({
                 })}`}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <div className="text-right">
               <div className="text-xl font-semibold" style={{ color: '#C0271A' }}>
                 Etapa {proyecto.etapa_actual}/7
               </div>
               <div className="text-xs text-gray-400">{ETAPAS[proyecto.etapa_actual - 1]?.nombre}</div>
             </div>
-            {proyecto.etapa_actual < 7 && (
+            {proyecto.etapa_actual < 7 && !archivado && (
               <button
                 onClick={avanzarEtapa}
                 className="text-xs px-3.5 py-2 rounded-lg text-white transition hover:opacity-90"
@@ -213,6 +247,27 @@ export default function ProyectoDetalle({
               />
             ))}
           </div>
+        </div>
+
+        {/* Acciones del proyecto */}
+        <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+          <Link href={`/proyectos/${proyecto.id}/editar`}>
+            <button className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+              ✏️ Editar proyecto
+            </button>
+          </Link>
+          <button
+            onClick={toggleArchivarProyecto}
+            className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+          >
+            {archivado ? '↩ Restaurar' : '🗂 Archivar'}
+          </button>
+          <button
+            onClick={eliminarProyecto}
+            className="text-xs px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition"
+          >
+            🗑 Eliminar
+          </button>
         </div>
       </div>
 
@@ -289,7 +344,6 @@ export default function ProyectoDetalle({
       {/* ── TAB: Documentos ── */}
       {tab === 'documentos' && (
         <div>
-          {/* Progreso docs */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 mb-3 flex items-center gap-4">
             <div className="flex-1">
               <div className="flex justify-between text-xs text-gray-500 mb-1.5">
@@ -426,7 +480,6 @@ export default function ProyectoDetalle({
       {/* ── TAB: Finanzas ── */}
       {tab === 'finanzas' && (
         <div className="grid grid-cols-2 gap-4">
-          {/* Egresos */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Egresos</h3>
             <div className="flex flex-col gap-2">
@@ -462,7 +515,6 @@ export default function ProyectoDetalle({
             </div>
           </div>
 
-          {/* Ingresos + Utilidad */}
           <div className="flex flex-col gap-4">
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Ingresos / Capital</h3>
@@ -530,8 +582,8 @@ export default function ProyectoDetalle({
           <div className="flex justify-between items-center mb-3">
             <p className="text-sm text-gray-500">
               {prospectos.length} prospecto
-              {prospectos.length !== 1 ? 's' : ''} registrado
-              {prospectos.length !== 1 ? 's' : ''}
+              {prospectos.length !== 1 ? 's' : ''} vinculado
+              {prospectos.length !== 1 ? 's' : ''} a esta propiedad
             </p>
             <button
               onClick={() => setShowAddProspecto(true)}
@@ -605,7 +657,7 @@ export default function ProyectoDetalle({
 
           {prospectos.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
-              Sin prospectos aún. Agrega el primero cuando empiece la comercialización.
+              Sin prospectos vinculados aún. Agrégalos aquí o vincúlalos desde la ficha de cada prospecto.
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -625,19 +677,26 @@ export default function ProyectoDetalle({
                       {p.telefono ? ` · ${p.telefono}` : ''}
                     </div>
                   </div>
-                  <select
-                    value={p.temperatura}
-                    onChange={e => cambiarTemperatura(p.id, e.target.value)}
-                    className={`text-[11px] px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${
-                      TEMP_BADGE[p.temperatura]
-                    }`}
-                  >
-                    {TEMPERATURA_OPTIONS.map(temp => (
-                      <option key={temp} value={temp}>
-                        {TEMP_LABEL[temp]}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <select
+                      value={p.temperatura}
+                      onChange={e => cambiarTemperatura(p.id, e.target.value)}
+                      className={`text-[11px] px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${
+                        TEMP_BADGE[p.temperatura]
+                      }`}
+                    >
+                      {TEMPERATURA_OPTIONS.map(temp => (
+                        <option key={temp} value={temp}>
+                          {TEMP_LABEL[temp]}
+                        </option>
+                      ))}
+                    </select>
+                    <Link href={`/prospectos/${p.id}`}>
+                      <button className="text-[11px] px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                        Ver ficha →
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

@@ -17,13 +17,13 @@ export type RequeridoDocumento = typeof REQUERIDO_OPTIONS[number]
 export const ROL_OPTIONS = ['admin', 'colaborador'] as const
 export type Rol = typeof ROL_OPTIONS[number]
 
-export const ESTATUS_PROYECTO_OPTIONS = ['activo', 'cerrado', 'cancelado'] as const
+export const ESTATUS_PROYECTO_OPTIONS = ['activo', 'archivado', 'cerrado', 'cancelado'] as const
 export type EstatusProyecto = typeof ESTATUS_PROYECTO_OPTIONS[number]
 
 export const TIPO_PARTIDA_OPTIONS = ['egreso', 'ingreso'] as const
 export type TipoPartida = typeof TIPO_PARTIDA_OPTIONS[number]
 
-export const ESTATUS_PROSPECTO_OPTIONS = ['activo', 'descartado', 'comprador'] as const
+export const ESTATUS_PROSPECTO_OPTIONS = ['activo', 'archivado', 'descartado', 'comprador'] as const
 export type EstatusProspecto = typeof ESTATUS_PROSPECTO_OPTIONS[number]
 
 export const TIPO_SEGUIMIENTO_OPTIONS = ['llamada', 'whatsapp', 'visita', 'nota'] as const
@@ -90,7 +90,7 @@ export interface PartidaFinanciera {
 
 export interface Prospecto {
   id: string
-  proyecto_id: string
+  proyecto_id: string | null
   nombre: string
   telefono: string | null
   email: string | null
