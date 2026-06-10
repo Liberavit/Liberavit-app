@@ -8,6 +8,12 @@ interface CookieToSet {
 }
 
 export async function middleware(request: NextRequest) {
+  // Dejar pasar libremente las solicitudes a la API (ej. webhooks de Make)
+  // Estas rutas tienen su propia seguridad por API key, no usan sesión de usuario.
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
