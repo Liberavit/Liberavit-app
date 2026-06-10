@@ -10,22 +10,26 @@ export default async function ProspectoPage({ params }: PageProps) {
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: prospecto }, { data: seguimientos }, { data: proyectos }] =
-    await Promise.all([
-      supabase.from('prospectos').select('*').eq('id', id).single(),
-      supabase
-        .from('seguimiento_prospectos')
-        .select('*')
-        .eq('prospecto_id', id)
-        .order('creado_en', { ascending: false }),
-      supabase
-        .from('proyectos')
-        .select('id, nombre')
-        .eq('estatus', 'activo')
-        .order('nombre'),
-    ])
+  const { data: prospecto } = await supabase
+    .from('prospectos')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
 
   if (!prospecto) notFound()
+
+  const [{ data: seguimientos }, { data: proyectos }] = await Promise.all([
+    supabase
+      .from('seguimiento_prospectos')
+      .select('*')
+      .eq('prospecto_id', id)
+      .order('creado_en', { ascending: false }),
+    supabase
+      .from('proyectos')
+      .select('id, nombre')
+      .eq('estatus', 'activo')
+      .order('nombre'),
+  ])
 
   return (
     <ProspectoDetalle
